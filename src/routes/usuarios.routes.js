@@ -1,24 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const usuariosController = require('../controllers/usuarios.controller');
 
-router.post('/', (req, res) => {
-    res.send('Registrar usuario');
-});
-
-router.get('/', (req, res) => {
-    res.send('Consultar usuarios');
-});
-
-router.get('/:id', (req, res) => {
-    res.send(`Consultar usuario con ID: ${req.params.id}`);
-});
-
-router.put('/:id', (req, res) => {
-    res.send(`Actualizar usuario con ID: ${req.params.id}`);
-});
-
-router.delete('/:id', (req, res) => {
-    res.send(`Eliminar usuario con ID: ${req.params.id}`);
-});
+// Definición de rutas delegadas al controlador (CRUD)
+router.post('/', usuariosController.crearUsuario);
+router.get('/', usuariosController.obtenerUsuarios);
+router.get('/:id', usuariosController.obtenerUsuarioPorId);
+router.put('/:id', usuariosController.actualizarUsuario);
+router.delete('/:id', usuariosController.eliminarUsuario);
 
 module.exports = router;
