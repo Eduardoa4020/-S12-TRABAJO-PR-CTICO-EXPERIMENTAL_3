@@ -1,24 +1,24 @@
 const express = require('express');
+const cors = require('cors');
 const usuariosRoutes = require('./routes/usuarios.routes');
-const pool = require('./db');
+const connectDB = require('./db');
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.use('/usuarios', usuariosRoutes);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 async function startServer() {
     try {
-        await pool.query('SELECT 1');
+        await connectDB();
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            console.log(`Servidor ejecutándose en el puerto ${PORT}`);
         });
     } catch (error) {
-        console.error('Unable to connect to PostgreSQL:', error);
-        process.exitCode = 1;
-        await pool.end();
+        process.exit(1);
     }
 }
 

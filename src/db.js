@@ -1,27 +1,21 @@
-require('dotenv').config({ quiet: true });
+require('dotenv').config();
 
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 
-const missingVariables = ['DB_USER', 'DB_PASSWORD'].filter(
-    (name) => process.env[name] === undefined
-);
+const connectDB = async () => {
+    try {
+        const mongoUri = process.env.MONGO_URI;
 
-if (missingVariables.length > 0) {
-    throw new Error(`Missing database configuration: ${missingVariables.join(', ')}. Set them in .env.`);
-}
+        if (!mongoUri) {
+            throw new Error('MONGO_URI no está definida. Copia .env.example como .env y configura la variable.');
+        }
 
-const port = Number(process.env.DB_PORT || 5432);
+        await mongoose.connect(mongoUri);
+        console.log('MongoDB conectado correctamente');
+    } catch (error) {
+        console.error('Error al conectar con MongoDB:', error.message);
+        throw error;
+    }
+};
 
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('DB_PORT must be an integer between 1 and 65535.');
-}
-
-const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port,
-    database: process.env.DB_NAME || 'api_usuarios',
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD
-});
-
-module.exports = pool;
+module.exports = connectDB;
