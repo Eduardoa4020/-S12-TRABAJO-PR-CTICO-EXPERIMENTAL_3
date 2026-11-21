@@ -27,6 +27,32 @@
       "response": []
     },
     {
+      "name": "Obtener por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/usuarios/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "usuarios",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PEGA_AQUI_EL_ID_DEL_USUARIO"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Crear registro",
       "request": {
         "method": "POST",

@@ -10,7 +10,8 @@ const connectDB = async () => {
             throw new Error('MONGO_URI no está definida. Copia .env.example como .env y configura la variable.');
         }
 
-        await mongoose.connect(mongoUri);
+        // Falla rápido (5 s) si Atlas/local no responde, en vez de esperar 30 s
+        await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
         console.log('MongoDB conectado correctamente');
     } catch (error) {
         console.error('Error al conectar con MongoDB:', error.message);
