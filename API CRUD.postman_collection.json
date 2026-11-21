@@ -1,15 +1,142 @@
 {
   "info": {
     "_postman_id": "8e136b31-0745-457f-b8a6-7593d0d5f92b",
-    "name": "API CRUD",
+    "name": "API CRUD + JWT Auth",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "60160443",
     "_collection_link": "https://go.postman.co/collection/60160443-8e136b31-0745-457f-b8a6-7593d0d5f92b?source=collection_link"
   },
   "item": [
     {
-      "name": "Obtener Registros",
+      "name": "1. Crear registro (Registro con hash bcrypt)",
       "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Erick Minda\",\r\n  \"correo\": \"erick@example.com\",\r\n  \"password\": \"secreto123\",\r\n  \"edad\": 22\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/usuarios",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "usuarios"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Login (Emite JWT)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"correo\": \"erick@example.com\",\r\n  \"password\": \"secreto123\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Obtener Perfil (Ruta Protegida - 200 / 401)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/auth/perfil",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "auth",
+            "perfil"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Panel Admin (Ruta Protegida por Rol - 401 / 403)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/auth/admin",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "auth",
+            "admin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Obtener Registros (Protegida)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
         "header": [],
         "url": {
@@ -27,8 +154,18 @@
       "response": []
     },
     {
-      "name": "Obtener por ID",
+      "name": "6. Obtener por ID (Protegida Propietario/Admin - 401 / 403)",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
         "header": [],
         "url": {
@@ -53,36 +190,18 @@
       "response": []
     },
     {
-      "name": "Crear registro",
+      "name": "7. Actualizar Registro",
       "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n  \"nombre\": \"Erick Minda\",\r\n  \"correo\": \"erick@example.com\",\r\n  \"edad\": 22\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
             }
-          }
-        },
-        "url": {
-          "raw": "http://localhost:3000/usuarios",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "usuarios"
           ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Actualizar Registro",
-      "request": {
+        },
         "method": "PUT",
         "header": [],
         "body": {
@@ -95,7 +214,7 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/usuarios/1",
+          "raw": "http://localhost:3000/usuarios/:id",
           "protocol": "http",
           "host": [
             "localhost"
@@ -103,19 +222,35 @@
           "port": "3000",
           "path": [
             "usuarios",
-            "1"
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PEGA_AQUI_EL_ID_DEL_USUARIO"
+            }
           ]
         }
       },
       "response": []
     },
     {
-      "name": "Eliminar registro",
+      "name": "8. Eliminar registro",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/usuarios/1",
+          "raw": "http://localhost:3000/usuarios/:id",
           "protocol": "http",
           "host": [
             "localhost"
@@ -123,11 +258,23 @@
           "port": "3000",
           "path": [
             "usuarios",
-            "1"
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PEGA_AQUI_EL_ID_DEL_USUARIO"
+            }
           ]
         }
       },
       "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": "PEGA_AQUI_TU_TOKEN_JWT"
     }
   ]
 }

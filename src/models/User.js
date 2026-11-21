@@ -31,12 +31,20 @@ const userSchema = new mongoose.Schema(
                 message: 'El campo "edad" debe ser un número entero mayor o igual a 0'
             }
         },
-        // Campo reservado para la autenticación JWT (Integrante 3).
-        // "select: false" evita que el hash se devuelva en las consultas.
-        // Aún no es obligatorio: el hash con bcrypt y el login se agregan en la Sesión 2.
+        // Campo para la autenticación JWT (Integrante 3).
+        // "select: false" evita que el hash se devuelva en las consultas por defecto.
         password: {
             type: String,
+            required: [true, 'El campo "password" es obligatorio'],
             select: false
+        },
+        rol: {
+            type: String,
+            enum: {
+                values: ['usuario', 'admin'],
+                message: 'El campo "rol" solo puede ser "usuario" o "admin"'
+            },
+            default: 'usuario'
         }
     },
     {

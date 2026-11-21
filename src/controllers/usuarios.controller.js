@@ -1,10 +1,15 @@
 // src/controllers/usuarios.controller.js
 // Controlador de usuarios respaldado en MongoDB (Mongoose).
 // Sesión 1 (Integrante 2): registro y consulta.
+// Sesión 2 (Integrante 3): hash de contraseñas con bcrypt en el registro.
 // Actualizar y eliminar quedan para el Integrante 5 (CRUD completo).
 
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+
+const SALT_ROUNDS = 10;
+const MIN_PASSWORD_LENGTH = 6;
 
 /**
  * Convierte los errores de Mongoose/MongoDB en una respuesta HTTP coherente.
@@ -35,21 +40,39 @@ const manejarError = (error, res, contexto) => {
  */
 const crearUsuario = async (req, res) => {
     try {
-        const { nombre, correo, email, edad } = req.body || {};
+        const { nombre, correo, email, edad, password, rol } = req.body || {};
 
         // Se construye el documento solo con los campos permitidos
-        // (evita que el cliente inyecte campos como password o _id).
+        // (evita que el cliente inyecte campos como _id).
         const datos = { nombre, correo: correo !== undefined ? correo : email };
         if (edad !== undefined && edad !== null && edad !== '') {
             datos.edad = edad;
         }
+        if (rol !== undefined) {
+            datos.rol = rol;
+        }
 
         // Los tipos inválidos (objetos, arreglos) no se castean a string en silencio
-        for (const campo of ['nombre', 'correo']) {
+        for (const campo of ['nombre', 'correo', 'rol']) {
             if (datos[campo] !== undefined && typeof datos[campo] !== 'string') {
                 return res.status(400).json({ error: `El campo "${campo}" debe ser un texto` });
             }
         }
+
+        // Validación y hash de la contraseña (Integrante 3)
+        if (password === undefined || password === null || password === '') {
+            return res.status(400).json({ error: 'El campo "password" es obligatorio' });
+        }
+        if (typeof password !== 'string') {
+            return res.status(400).json({ error: 'El campo "password" debe ser un texto' });
+        }
+        if (password.length < MIN_PASSWORD_LENGTH) {
+            return res.status(400).json({
+                error: `El campo "password" debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`
+            });
+        }
+
+        datos.password = await bcrypt.hash(password, SALT_ROUNDS);
 
         const usuario = await User.create(datos);
 

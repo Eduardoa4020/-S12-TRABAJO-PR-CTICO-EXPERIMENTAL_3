@@ -19,17 +19,16 @@ Esta es la configuración inicial entregada para continuar el trabajo con el equ
 
 - Configuración inicial del servidor Express.
 - Conexión configurable a MongoDB mediante Mongoose.
-- Modelo de usuario con Mongoose (`src/models/User.js`): nombre, correo único, edad, fechas de creación/actualización.
-- Registro (`POST /usuarios`) y consulta (`GET /usuarios`, `GET /usuarios/:id`) respaldados en MongoDB, con validaciones y códigos 400/404/409.
+- Modelo de usuario con Mongoose (`src/models/User.js`): nombre, correo único, edad, contraseña cifrada (`password`), rol (`usuario` / `admin`) y fechas de creación/actualización.
+- Registro (`POST /usuarios` y `POST /auth/register`) con cifrado de contraseñas mediante `bcryptjs` (10 rondas de salt) y validaciones.
+- Inicio de sesión (`POST /auth/login`) que verifica credenciales y emite un token JWT firmado.
+- Middleware de verificación de token JWT (`verificarToken` -> `401 Unauthorized`) y autorización por rol/propietario (`requerirRol`, `verificarPropietarioOAdmin` -> `403 Forbidden`).
+- Rutas protegidas (`GET /auth/perfil`, `GET /auth/admin`, `GET /usuarios`, `GET /usuarios/:id`) respaldadas en MongoDB con manejo de códigos `400`, `401`, `403`, `404` y `409`.
 - Configuración de CORS y variables de entorno.
 
 ### Planificadas
 
-- CRUD completo de usuarios con persistencia en MongoDB.
-- Registro e inicio de sesión de usuarios.
-- Cifrado de contraseñas con bcrypt.
-- Generación y validación de tokens JWT.
-- Protección de rutas privadas mediante middleware de autenticación.
+- CRUD completo de usuarios (`PUT /usuarios/:id` y `DELETE /usuarios/:id`) con persistencia en MongoDB (Integrante 5).
 
 ## Instalación
 
@@ -74,20 +73,49 @@ Puedes usar MongoDB local (`mongodb://localhost:27017/practica4_db`) o MongoDB A
 | `nombre` | String | obligatorio, máx. 100 caracteres |
 | `correo` | String | obligatorio, único, en minúsculas, formato válido, máx. 254 |
 | `edad` | Number | opcional, entero ≥ 0 |
-| `password` | String | reservado para JWT (no se devuelve en las consultas) |
+| `password` | String | obligatorio (mín. 6 caracteres), almacenado con hash bcrypt (no se devuelve en consultas) |
+| `rol` | String | opcional (`"usuario"` por defecto o `"admin"`) |
 | `creado_en` / `actualizado_en` | Date | automáticos |
 
 ## Endpoints
 
+### Autenticación (`/auth`)
+- `POST /auth/register` (o `POST /usuarios`) — Registrar usuario con contraseña cifrada (`201`; `400` validación; `409` correo repetido).
+- `POST /auth/login` — Iniciar sesión y emitir token JWT (`200`; `400` validación; `401` credenciales inválidas).
+- `GET /auth/perfil` — **(Protegida)** Obtener perfil del usuario autenticado (`200`; `401` token faltante/inválido/expirado).
+- `GET /auth/admin` — **(Protegida por rol)** Panel exclusivo para rol `admin` (`200`; `401` sin token válido; `403` si el rol no es `admin`).
+
+### Usuarios (`/usuarios`)
 - `POST /usuarios` — Registrar usuario (`201`; `400` validación; `409` correo repetido).
-- `GET /usuarios` — Consultar usuarios (`200`).
-- `GET /usuarios/:id` — Consultar usuario por ID (`200`; `400` ID inválido; `404` no existe).
-- `PUT /usuarios/:id` — Actualizar usuario (pendiente, responde `501`).
-- `DELETE /usuarios/:id` — Eliminar usuario (pendiente, responde `501`).
+- `GET /usuarios` — **(Protegida)** Consultar usuarios (`200`; `401` sin token válido).
+- `GET /usuarios/:id` — **(Protegida: propietario o admin)** Consultar usuario por ID (`200`; `400` ID inválido; `401` sin token; `403` si intenta ver otro usuario sin ser `admin`; `404` no existe).
+- `PUT /usuarios/:id` — **(Protegida: propietario o admin)** Actualizar usuario (pendiente, responde `501`).
+- `DELETE /usuarios/:id` — **(Protegida: propietario o admin)** Eliminar usuario (pendiente, responde `501`).
 
 Ejemplo de registro:
 
 ```json
 POST /usuarios
-{ "nombre": "Erick Minda", "correo": "erick@example.com", "edad": 22 }
+{
+  "nombre": "Erick Minda",
+  "correo": "erick@example.com",
+  "password": "miPassword123",
+  "edad": 22
+}
+```
+
+Ejemplo de login:
+
+```json
+POST /auth/login
+{
+  "correo": "erick@example.com",
+  "password": "miPassword123"
+}
+```
+
+Uso del token en rutas protegidas (Encabezado HTTP):
+
+```http
+Authorization: Bearer <TOKEN_JWT>
 ```
