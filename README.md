@@ -62,9 +62,37 @@ npm start
 
 La API estará disponible en `http://localhost:3000`. Al iniciar, el servidor se conectará a MongoDB antes de comenzar a escuchar solicitudes.
 
+## Aplicación React
+
+El cliente React está en `frontend/` y consume esta API. Para ejecutar la aplicación completa, inicia primero MongoDB y el servidor en una terminal:
+
+```bash
+npm install
+npm start
+```
+
+En otra terminal, instala y ejecuta el cliente:
+
+```bash
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
+
+Abre la dirección que muestra Vite (normalmente `http://localhost:5173`). El cliente usa `http://localhost:3000` por defecto. Para apuntarlo a otro servidor, copia `frontend/.env.example` a `frontend/.env` y configura `VITE_API_URL`.
+
+El cliente permite crear una cuenta, iniciar sesión, conservar el JWT en el navegador, consultar el perfil y cargar el directorio desde rutas protegidas. Cerrar sesión elimina el token local. La edición y eliminación quedan pendientes de que el backend implemente esos endpoints.
+
 ## Base de datos
 
 Puedes usar MongoDB local (`mongodb://localhost:27017/practica4_db`) o MongoDB Atlas (cadena `mongodb+srv://...` en `MONGO_URI`; recuerda permitir tu IP en *Network Access*). La colección se llama `usuarios` y el índice único de `correo` se crea al iniciar el servidor.
+
+Para desarrollo local también puedes ejecutar MongoDB con Docker:
+
+```powershell
+docker run --name usuarios-mongodb --restart unless-stopped --publish 127.0.0.1:27017:27017 --volume usuarios_mongodb_data:/data/db --detach mongo:8
+```
+
+Configura `MONGO_URI=mongodb://127.0.0.1:27017/practica4_db` y una clave aleatoria propia en `JWT_SECRET` dentro de `.env`. El puerto queda publicado solo en localhost y los datos persisten en el volumen `usuarios_mongodb_data`. Para detener e iniciar la base, usa `docker stop usuarios-mongodb` y `docker start usuarios-mongodb`.
 
 ## Modelo de usuario
 
