@@ -2,7 +2,7 @@
 // Controlador de usuarios respaldado en MongoDB (Mongoose).
 // Sesión 1 (Integrante 2): registro y consulta.
 // Sesión 2 (Integrante 3): hash de contraseñas con bcrypt en el registro.
-// Actualizar y eliminar quedan para el Integrante 5 (CRUD completo).
+// CRUD completo con validaciones y manejo de errores.
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -57,6 +57,11 @@ const crearUsuario = async (req, res) => {
             if (datos[campo] !== undefined && typeof datos[campo] !== 'string') {
                 return res.status(400).json({ error: `El campo "${campo}" debe ser un texto` });
             }
+        }
+        if (rol === 'admin') {
+            return res.status(403).json({
+                error: 'No se puede asignar el rol de administrador durante el registro'
+            });
         }
 
         // Validación y hash de la contraseña (Integrante 3)
@@ -132,18 +137,106 @@ const obtenerUsuarioPorId = async (req, res) => {
 
 /**
  * PUT /usuarios/:id
- * Pendiente: lo completa el Integrante 5 (CRUD completo).
+ * Actualizar los campos permitidos de un usuario.
  */
 const actualizarUsuario = async (req, res) => {
-    return res.status(501).json({ error: 'Actualizar usuario aún no está implementado' });
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ error: 'El ID proporcionado no es válido' });
+        }
+
+        if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+            return res.status(400).json({ error: 'El cuerpo de la petición debe ser un objeto JSON' });
+        }
+
+        const { nombre, correo, email, edad, password, rol, ...camposNoPermitidos } = req.body;
+        if (Object.keys(camposNoPermitidos).length > 0) {
+            return res.status(400).json({
+                error: `Campo(s) no permitido(s): ${Object.keys(camposNoPermitidos).join(', ')}`
+            });
+        }
+
+        const datos = {};
+        for (const [campo, valor] of Object.entries({
+            nombre,
+            correo: correo !== undefined ? correo : email
+        })) {
+            if (valor !== undefined && typeof valor !== 'string') {
+                return res.status(400).json({ error: `El campo "${campo}" debe ser un texto` });
+            }
+        }
+        if (nombre !== undefined) datos.nombre = nombre;
+        if (correo !== undefined || email !== undefined) {
+            datos.correo = correo !== undefined ? correo : email;
+        }
+        if (edad !== undefined) datos.edad = edad === '' || edad === null ? undefined : edad;
+        if (password !== undefined) {
+            if (typeof password !== 'string') {
+                return res.status(400).json({ error: 'El campo "password" debe ser un texto' });
+            }
+            if (password.length < MIN_PASSWORD_LENGTH) {
+                return res.status(400).json({
+                    error: `El campo "password" debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`
+                });
+            }
+            datos.password = await bcrypt.hash(password, SALT_ROUNDS);
+        }
+        if (rol !== undefined) {
+            if (req.usuario.rol !== 'admin') {
+                return res.status(403).json({
+                    error: 'Acceso prohibido: solo un administrador puede cambiar el rol de un usuario'
+                });
+            }
+            if (typeof rol !== 'string') {
+                return res.status(400).json({ error: 'El campo "rol" debe ser un texto' });
+            }
+            datos.rol = rol;
+        }
+        if (Object.keys(datos).length === 0) {
+            return res.status(400).json({ error: 'Debes proporcionar al menos un campo para actualizar' });
+        }
+
+        const usuario = await User.findById(id);
+        if (!usuario) {
+            return res.status(404).json({ error: `Usuario con ID ${id} no encontrado` });
+        }
+
+        usuario.set(datos);
+        await usuario.save();
+
+        return res.status(200).json({
+            mensaje: 'Usuario actualizado con éxito',
+            datos: usuario
+        });
+    } catch (error) {
+        return manejarError(error, res, 'actualizar el usuario');
+    }
 };
 
 /**
  * DELETE /usuarios/:id
- * Pendiente: lo completa el Integrante 5 (CRUD completo).
+ * Eliminar un usuario.
  */
 const eliminarUsuario = async (req, res) => {
-    return res.status(501).json({ error: 'Eliminar usuario aún no está implementado' });
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ error: 'El ID proporcionado no es válido' });
+        }
+
+        const usuario = await User.findByIdAndDelete(id);
+        if (!usuario) {
+            return res.status(404).json({ error: `Usuario con ID ${id} no encontrado` });
+        }
+
+        return res.status(200).json({
+            mensaje: 'Usuario eliminado con éxito',
+            datos: usuario
+        });
+    } catch (error) {
+        return manejarError(error, res, 'eliminar el usuario');
+    }
 };
 
 module.exports = {

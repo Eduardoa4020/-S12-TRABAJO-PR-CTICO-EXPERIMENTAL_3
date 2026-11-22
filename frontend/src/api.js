@@ -68,3 +68,18 @@ export function getProfile(token, signal) {
 export function getUsers(token, signal) {
   return request('/usuarios', { token, signal });
 }
+
+export function updateUser(id, user, token) {
+  return request(`/usuarios/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    token,
+    body: JSON.stringify(user),
+  });
+}
+
+export function deleteUser(id, token) {
+  return request(`/usuarios/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    token,
+  });
+}

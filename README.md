@@ -24,11 +24,11 @@ Esta es la configuración inicial entregada para continuar el trabajo con el equ
 - Inicio de sesión (`POST /auth/login`) que verifica credenciales y emite un token JWT firmado.
 - Middleware de verificación de token JWT (`verificarToken` -> `401 Unauthorized`) y autorización por rol/propietario (`requerirRol`, `verificarPropietarioOAdmin` -> `403 Forbidden`).
 - Rutas protegidas (`GET /auth/perfil`, `GET /auth/admin`, `GET /usuarios`, `GET /usuarios/:id`) respaldadas en MongoDB con manejo de códigos `400`, `401`, `403`, `404` y `409`.
+- CRUD completo: actualización (`PUT /usuarios/:id`) y eliminación (`DELETE /usuarios/:id`), protegidas por JWT y autorización de propietario o administrador.
+- Validaciones de datos, campos permitidos, contraseña, identificadores y correo duplicado; los errores de validación devuelven `400` y los conflictos de correo `409`.
+- El registro público no permite asignar el rol `admin`; solo un administrador autenticado puede cambiar roles.
+- Interfaz React para editar y eliminar cuentas propias; los administradores también pueden gestionar otras cuentas.
 - Configuración de CORS y variables de entorno.
-
-### Planificadas
-
-- CRUD completo de usuarios (`PUT /usuarios/:id` y `DELETE /usuarios/:id`) con persistencia en MongoDB (Integrante 5).
 
 ## Instalación
 
@@ -80,7 +80,7 @@ npm --prefix frontend run dev
 
 Abre la dirección que muestra Vite (normalmente `http://localhost:5173`). El cliente usa `http://localhost:3000` por defecto. Para apuntarlo a otro servidor, copia `frontend/.env.example` a `frontend/.env` y configura `VITE_API_URL`.
 
-El cliente permite crear una cuenta, iniciar sesión, conservar el JWT en el navegador, consultar el perfil y cargar el directorio desde rutas protegidas. Cerrar sesión elimina el token local. La edición y eliminación quedan pendientes de que el backend implemente esos endpoints.
+El cliente permite crear una cuenta, iniciar sesión, conservar el JWT en el navegador, consultar el perfil y cargar el directorio desde rutas protegidas. Cada usuario puede editar o eliminar su propia cuenta; un administrador puede gestionar cualquier registro. Cerrar sesión elimina el token local.
 
 ## Base de datos
 
@@ -93,6 +93,8 @@ docker run --name usuarios-mongodb --restart unless-stopped --publish 127.0.0.1:
 ```
 
 Configura `MONGO_URI=mongodb://127.0.0.1:27017/practica4_db` y una clave aleatoria propia en `JWT_SECRET` dentro de `.env`. El puerto queda publicado solo en localhost y los datos persisten en el volumen `usuarios_mongodb_data`. Para detener e iniciar la base, usa `docker stop usuarios-mongodb` y `docker start usuarios-mongodb`.
+
+El primer administrador debe crearse mediante un proceso de configuración confiable; después, un administrador autenticado puede asignar o cambiar roles desde `PUT /usuarios/:id`.
 
 ## Modelo de usuario
 
@@ -108,17 +110,21 @@ Configura `MONGO_URI=mongodb://127.0.0.1:27017/practica4_db` y una clave aleator
 ## Endpoints
 
 ### Autenticación (`/auth`)
-- `POST /auth/register` (o `POST /usuarios`) — Registrar usuario con contraseña cifrada (`201`; `400` validación; `409` correo repetido).
+- `POST /auth/register` (o `POST /usuarios`) — Registrar usuario con contraseña cifrada (`201`; `400` validación; `403` intento de asignar el rol admin; `409` correo repetido).
 - `POST /auth/login` — Iniciar sesión y emitir token JWT (`200`; `400` validación; `401` credenciales inválidas).
 - `GET /auth/perfil` — **(Protegida)** Obtener perfil del usuario autenticado (`200`; `401` token faltante/inválido/expirado).
 - `GET /auth/admin` — **(Protegida por rol)** Panel exclusivo para rol `admin` (`200`; `401` sin token válido; `403` si el rol no es `admin`).
 
 ### Usuarios (`/usuarios`)
-- `POST /usuarios` — Registrar usuario (`201`; `400` validación; `409` correo repetido).
+- `POST /usuarios` — Registrar usuario (`201`; `400` validación; `403` intento de asignar el rol admin; `409` correo repetido).
 - `GET /usuarios` — **(Protegida)** Consultar usuarios (`200`; `401` sin token válido).
 - `GET /usuarios/:id` — **(Protegida: propietario o admin)** Consultar usuario por ID (`200`; `400` ID inválido; `401` sin token; `403` si intenta ver otro usuario sin ser `admin`; `404` no existe).
-- `PUT /usuarios/:id` — **(Protegida: propietario o admin)** Actualizar usuario (pendiente, responde `501`).
-- `DELETE /usuarios/:id` — **(Protegida: propietario o admin)** Eliminar usuario (pendiente, responde `501`).
+- `PUT /usuarios/:id` — **(Protegida: propietario o admin)** Actualizar nombre, correo, edad y/o contraseña (`200`; `400` validación/campos no permitidos/ID inválido; `401` sin token; `403` sin permisos o al cambiar el rol sin ser admin; `404` no existe; `409` correo repetido).
+- `DELETE /usuarios/:id` — **(Protegida: propietario o admin)** Eliminar usuario (`200`; `400` ID inválido; `401` sin token; `403` sin permisos; `404` no existe).
+
+## Pruebas
+
+Ejecuta `npm test` para las pruebas HTTP integrales de registro, autenticación, consulta, actualización, eliminación, validaciones y permisos. La suite usa persistencia en memoria para que no sea necesario iniciar MongoDB; el servidor normal sí requiere MongoDB.
 
 Ejemplo de registro:
 

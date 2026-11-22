@@ -2,6 +2,7 @@
 // Middlewares de autenticación y autorización con JWT (Sesión 2 - Integrante 3).
 
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 /**
  * Middleware 401: Verifica que la petición incluya un token JWT válido en
@@ -81,6 +82,12 @@ const verificarPropietarioOAdmin = (req, res, next) => {
     }
 
     const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({
+            error: 'El ID proporcionado no es válido'
+        });
+    }
+
     const esPropietario = String(req.usuario.id) === String(id);
     const esAdmin = req.usuario.rol === 'admin';
 

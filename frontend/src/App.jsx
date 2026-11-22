@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ApiError, getProfile, getUsers, loginUser, registerUser } from './api.js';
+import {
+  ApiError,
+  deleteUser,
+  getProfile,
+  getUsers,
+  loginUser,
+  registerUser,
+  updateUser,
+} from './api.js';
 
 const TOKEN_KEY = 'usuarios.jwt';
 
@@ -184,7 +192,70 @@ function AuthForm({ mode, onModeChange, onLogin, onRegister }) {
   );
 }
 
-function Dashboard({ profile, users, onLogout, loading, error }) {
+function Dashboard({
+  profile,
+  users,
+  onLogout,
+  loading,
+  error,
+  onUpdateUser,
+  onDeleteUser,
+}) {
+  const [editingId, setEditingId] = useState(null);
+  const [editValues, setEditValues] = useState({ nombre: '', correo: '', edad: '' });
+  const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function startEditing(user) {
+    setEditingId(user.id);
+    setEditValues({
+      nombre: user.nombre || '',
+      correo: user.correo || '',
+      edad: user.edad ?? '',
+    });
+    setActionError('');
+    setActionNotice('');
+  }
+
+  async function saveUser(event) {
+    event.preventDefault();
+    setActionError('');
+    setActionNotice('');
+    setBusy(true);
+    try {
+      const changes = {
+        nombre: editValues.nombre.trim(),
+        correo: editValues.correo.trim(),
+        edad: editValues.edad === '' ? null : Number(editValues.edad),
+      };
+      await onUpdateUser(editingId, changes);
+      setEditingId(null);
+      setActionNotice('Los cambios se guardaron correctamente.');
+    } catch (requestError) {
+      setActionError(requestError.message || 'No se pudo actualizar el usuario.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeUser(user) {
+    if (!window.confirm(`¿Eliminar la cuenta de ${user.nombre}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    setActionError('');
+    setActionNotice('');
+    setBusy(true);
+    try {
+      await onDeleteUser(user.id);
+      setActionNotice('El usuario se eliminó correctamente.');
+    } catch (requestError) {
+      setActionError(requestError.message || 'No se pudo eliminar el usuario.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="dashboard">
       <header className="dashboard-header">
@@ -224,6 +295,8 @@ function Dashboard({ profile, users, onLogout, loading, error }) {
         </div>
 
         {error && <p className="form-message error" role="alert">{error}</p>}
+        {actionError && <p className="form-message error" role="alert">{actionError}</p>}
+        {actionNotice && <p className="form-message success" role="status">{actionNotice}</p>}
         {loading ? (
           <div className="empty-state">Cargando usuarios…</div>
         ) : users.length === 0 ? (
@@ -231,21 +304,98 @@ function Dashboard({ profile, users, onLogout, loading, error }) {
         ) : (
           <div className="user-list">
             {users.map((user) => (
-              <article className="user-row" key={user.id}>
-                <span className="user-avatar">
-                  {(user.nombre || '?').charAt(0).toUpperCase()}
-                </span>
-                <div className="user-details">
-                  <strong>{user.nombre}</strong>
-                  <span>{user.correo}</span>
-                </div>
-                <div className="user-meta">
-                  {user.edad !== undefined && user.edad !== null && (
-                    <span>{user.edad} años</span>
+              <div className="user-entry" key={user.id}>
+                <article className="user-row">
+                  <span className="user-avatar">
+                    {(user.nombre || '?').charAt(0).toUpperCase()}
+                  </span>
+                  <div className="user-details">
+                    <strong>{user.nombre}</strong>
+                    <span>{user.correo}</span>
+                  </div>
+                  <div className="user-meta">
+                    {user.edad !== undefined && user.edad !== null && (
+                      <span>{user.edad} años</span>
+                    )}
+                    <span className="role-pill">{user.rol || 'usuario'}</span>
+                  </div>
+                  {(profile?.rol === 'admin' || profile?.id === user.id) && (
+                    <div className="user-actions">
+                      <button
+                        className="edit-button"
+                        disabled={busy}
+                        onClick={() => startEditing(user)}
+                        type="button"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="delete-button"
+                        disabled={busy}
+                        onClick={() => removeUser(user)}
+                        type="button"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   )}
-                  <span className="role-pill">{user.rol || 'usuario'}</span>
-                </div>
-              </article>
+                </article>
+                {editingId === user.id && (
+                  <form className="user-edit-form" onSubmit={saveUser}>
+                    <label>
+                      Nombre
+                      <input
+                        maxLength={100}
+                        onChange={(event) => setEditValues((current) => ({
+                          ...current,
+                          nombre: event.target.value,
+                        }))}
+                        required
+                        value={editValues.nombre}
+                      />
+                    </label>
+                    <label>
+                      Correo electrónico
+                      <input
+                        maxLength={254}
+                        onChange={(event) => setEditValues((current) => ({
+                          ...current,
+                          correo: event.target.value,
+                        }))}
+                        required
+                        type="email"
+                        value={editValues.correo}
+                      />
+                    </label>
+                    <label>
+                      Edad
+                      <input
+                        min="0"
+                        onChange={(event) => setEditValues((current) => ({
+                          ...current,
+                          edad: event.target.value,
+                        }))}
+                        step="1"
+                        type="number"
+                        value={editValues.edad}
+                      />
+                    </label>
+                    <div className="edit-form-actions">
+                      <button className="submit-button" disabled={busy} type="submit">
+                        {busy ? 'Guardando…' : 'Guardar cambios'}
+                      </button>
+                      <button
+                        className="edit-button"
+                        disabled={busy}
+                        onClick={() => setEditingId(null)}
+                        type="button"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -329,12 +479,33 @@ export default function App() {
     await registerUser(user);
   }
 
+  async function handleUpdateUser(id, changes) {
+    const result = await updateUser(id, changes, token);
+    setUsers((current) => current.map((user) => (
+      user.id === id ? result.datos : user
+    )));
+    if (profile?.id === id) {
+      setProfile(result.datos);
+    }
+  }
+
+  async function handleDeleteUser(id) {
+    await deleteUser(id, token);
+    if (profile?.id === id) {
+      signOut();
+      return;
+    }
+    setUsers((current) => current.filter((user) => user.id !== id));
+  }
+
   if (token) {
     return (
       <Dashboard
         error={dashboardError}
         loading={dashboardLoading}
         onLogout={signOut}
+        onDeleteUser={handleDeleteUser}
+        onUpdateUser={handleUpdateUser}
         profile={profile}
         users={users}
       />
